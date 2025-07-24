@@ -11,19 +11,7 @@ import (
 )
 
 
-func getDatabaseLogger() (slog.Logger) {
-	// We could add some additional field of logger, those relates only to the DB.
-	loggerConfig, err := core.InitializeLoggerConfig()
-	if err != nil {
-		panic(err)
-	}
-
-	return *core.GetConfigureLogger(loggerConfig.Level)
-}
-
-func ConnectToDatabase(databaseConfig core.DatabaseConfig) (*sql.DB, error) {
-
-	logger := getDatabaseLogger()
+func ConnectToDatabase(databaseConfig core.DatabaseConfig, logger *slog.Logger) (*sql.DB, error) {
 
 	if isDatabaseDriverAllowed(databaseConfig.DBDriver) == false {
 		logger.Error("Unsupported database driver.", "database_driver", databaseConfig.DBDriver)
