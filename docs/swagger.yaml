@@ -1,0 +1,169 @@
+definitions:
+  v1.ErrorResponse:
+    properties:
+      error:
+        example: error message
+        type: string
+    type: object
+  v1.RefreshTokenRequest:
+    properties:
+      refresh_token:
+        example: V29uZGVyZnVsIHJlZnJlc2ggdG9rZW4h
+        type: string
+    type: object
+  v1.SuccessResponse:
+    properties:
+      message:
+        example: operation successful
+        type: string
+    type: object
+  v1.TokenPairResponse:
+    properties:
+      access_token:
+        example: eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9...
+        type: string
+      refresh_token:
+        example: V29uZGVyZnVsIHJlZnJlc2ggdG9rZW4h
+        type: string
+    type: object
+  v1.UserGUIDResponse:
+    properties:
+      user_id:
+        example: a1b2c3d4-e5f6-7890-1234-567890abcdef
+        type: string
+    type: object
+info:
+  contact: {}
+  description: This is a sample authentication service.
+  title: Go Base Auth API
+  version: "1.0"
+paths:
+  /api/v1/auth/token:
+    post:
+      consumes:
+      - application/json
+      description: Generates a new access and refresh token pair for a given user
+        ID.
+      parameters:
+      - description: User GUID
+        format: uuid
+        in: query
+        name: user_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.TokenPairResponse'
+        "400":
+          description: 'Invalid request: user_id is required'
+          schema:
+            $ref: '#/definitions/v1.ErrorResponse'
+        "422":
+          description: 'Invalid request: user_id must be a valid UUID'
+          schema:
+            $ref: '#/definitions/v1.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/v1.ErrorResponse'
+      summary: Generate a new token pair
+      tags:
+      - Auth
+  /api/v1/auth/token/logout:
+    post:
+      description: Revokes all refresh tokens for the current user, effectively logging
+        them out.
+      parameters:
+      - description: Bearer {access_token}
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.SuccessResponse'
+        "401":
+          description: 'Unauthorized: invalid or missing token'
+          schema:
+            $ref: '#/definitions/v1.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/v1.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Logout user
+      tags:
+      - Auth
+  /api/v1/auth/token/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Refreshes an existing token pair using a valid refresh token.
+      parameters:
+      - description: Bearer {access_token}
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      - description: Refresh Token
+        in: body
+        name: refresh_token
+        required: true
+        schema:
+          $ref: '#/definitions/v1.RefreshTokenRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.TokenPairResponse'
+        "400":
+          description: Invalid request body
+          schema:
+            $ref: '#/definitions/v1.ErrorResponse'
+        "401":
+          description: 'Unauthorized: invalid or missing token'
+          schema:
+            $ref: '#/definitions/v1.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Refresh a token pair
+      tags:
+      - Auth
+  /api/v1/user/me:
+    get:
+      description: Retrieves the GUID of the user associated with the provided access
+        token.
+      parameters:
+      - description: Bearer {access_token}
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/v1.UserGUIDResponse'
+        "401":
+          description: 'Unauthorized: invalid or missing token'
+          schema:
+            $ref: '#/definitions/v1.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Get current user's GUID
+      tags:
+      - User
+swagger: "2.0"
