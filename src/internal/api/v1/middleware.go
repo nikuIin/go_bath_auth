@@ -17,7 +17,7 @@ func AuthMiddleware(authService *services.AuthService) fiber.Handler {
 
 		parts := strings.Split(authHeader, " ")
 		if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "invalid authorization header format"})
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "invalid authorization header format. Should be: Bearer {access_token}"})
 		}
 
 		accessToken := parts[1]
