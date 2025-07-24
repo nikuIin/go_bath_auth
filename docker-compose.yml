@@ -1,0 +1,44 @@
+services:
+  db:
+    image: postgres-golang-base-auth-image:1.0
+    build:
+      context: ./postgres_image
+      dockerfile: Dockerfile
+    container_name: go-base-auth-base
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${DB_USERNAME} -d $${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    ports:
+      - "5432:5432"
+    networks:
+      - base-go-auth-network
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+  backend:
+    image: backend-go-base-auth-image:1.0
+    build:
+      context: ./
+    container_name: backend-go-base-auth-cnt
+    env_file:
+      - .env
+    depends_on:
+      - db
+    ports:
+      - "8000:8000"
+    networks:
+      - base-go-auth-network
+
+networks:
+  base-go-auth-network:
+
+volumes:
+  postgres_data:
