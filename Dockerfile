@@ -1,4 +1,4 @@
-FROM --platform=linux/amd64 golang:tip-bookworm AS build
+FROM golang:tip-bookworm AS build
 
 WORKDIR /app
 
@@ -11,7 +11,7 @@ COPY src /app/src
 RUN go build /app/src/main.go
 
 # now add production version
-FROM --platform=linux/amd64 kukymbr/goose-docker:3.24.2 AS production
+FROM kukymbr/goose-docker:3.24.2 AS production
 
 WORKDIR /app
 
@@ -22,9 +22,4 @@ COPY --from=build /app/main /app/main
 COPY entrypoint.sh /app/entrypoint.sh
 COPY --from=build /app/migrations /app/migrations
 
-
-RUN chmod +x /app/entrypoint.sh
-
-EXPOSE 8000
-
-ENTRYPOINT ["/app/entrypoint.sh"]
+ENTRYPOINT ["/app/main"]
