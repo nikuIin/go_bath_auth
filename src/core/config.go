@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/joho/godotenv"
@@ -20,13 +21,19 @@ type DatabaseConfig struct {
 }
 
 
-type serverConfig struct {
-	host string
-	port string
+type ServerConfig struct {
+	Title string
+	Port string
 }
 
-type loginAttemptWebhookConfig struct {
-	url string
+type LoginAttemptWebhookConfig struct {
+	URL string
+}
+
+type JWTConfig struct {
+	Secret string
+	ExpiresAccessMinutes int
+	ExpiresRefreshMinutes int
 }
 
 type LoggerConfig struct {
@@ -55,7 +62,7 @@ func InitializeLoggerConfig() (LoggerConfig, error) {
 		level = slog.LevelDebug
 	case "INFO":
 		level = slog.LevelInfo
-	case "WARN":
+	case "WARNING":
 		level = slog.LevelWarn
 	case "ERROR":
 		level = slog.LevelError
@@ -73,8 +80,10 @@ func InitializeLoggerConfig() (LoggerConfig, error) {
 }
 
 func InitializeDatabaseConfig() (DatabaseConfig, error) {
-
-	// TODO: add regex mapping for settings
+	err := godotenv.Load()
+	if err != nil {
+		return DatabaseConfig{}, err
+	}
 
 	return DatabaseConfig{
 		DBDriver:   os.Getenv("DB_DRIVER"),
@@ -85,4 +94,51 @@ func InitializeDatabaseConfig() (DatabaseConfig, error) {
 		Password:   os.Getenv("DB_PASSWORD"),
 	},  nil
 
+}
+
+func InitializeLoginAttemptWebhookConfig() (LoginAttemptWebhookConfig, error) {
+	err := godotenv.Load()
+	if err != nil {
+		return LoginAttemptWebhookConfig{}, err
+	}
+
+	return LoginAttemptWebhookConfig{
+		URL:   os.Getenv("NOTIFICATION_WEBHOOK_URL"),
+	},  nil
+}
+
+func InitializeJWTConfig() (JWTConfig, error) {
+	err := godotenv.Load()
+	if err != nil {
+		return JWTConfig{}, err
+	}
+
+	expiresAccessMinutes, err := strconv.Atoi(os.Getenv("EXPIRES_ACCESS_MINUTES"))
+	if err != nil {
+		return JWTConfig{}, err
+	}
+
+	expiresRefreshMinutes, err := strconv.Atoi(os.Getenv("EXPIRES_REFRESH_MINUTES"))
+	if err != nil {
+		return JWTConfig{}, err
+	}
+
+	return JWTConfig{
+		Secret:   os.Getenv("APPLICATION_HOST"),
+		ExpiresAccessMinutes:  expiresAccessMinutes,
+		ExpiresRefreshMinutes: expiresRefreshMinutes,
+	},  nil
+}
+
+
+func InitializeServerConfig() (ServerConfig, error) {
+	err := godotenv.Load()
+	if err != nil {
+		return ServerConfig{}, err
+	}
+
+	return ServerConfig{
+		Title: os.Getenv("APP_NAME"),
+		Port:  os.Getenv("APPLICATION_PORT"),
+	}, nil
 }
