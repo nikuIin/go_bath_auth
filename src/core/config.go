@@ -6,8 +6,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-
-	"github.com/joho/godotenv"
 )
 
 
@@ -42,10 +40,6 @@ type LoggerConfig struct {
 
 
 func InitializeLoggerConfig() (LoggerConfig, error) {
-	err := godotenv.Load()
-	if err != nil {
-		return LoggerConfig{}, err
-	}
 
 	var levelStr string = os.Getenv("LOGGER_LEVEL")
 	if levelStr == "" {
@@ -80,10 +74,6 @@ func InitializeLoggerConfig() (LoggerConfig, error) {
 }
 
 func InitializeDatabaseConfig() (DatabaseConfig, error) {
-	err := godotenv.Load()
-	if err != nil {
-		return DatabaseConfig{}, err
-	}
 
 	return DatabaseConfig{
 		DBDriver:   os.Getenv("DB_DRIVER"),
@@ -97,10 +87,6 @@ func InitializeDatabaseConfig() (DatabaseConfig, error) {
 }
 
 func InitializeLoginAttemptWebhookConfig() (LoginAttemptWebhookConfig, error) {
-	err := godotenv.Load()
-	if err != nil {
-		return LoginAttemptWebhookConfig{}, err
-	}
 
 	return LoginAttemptWebhookConfig{
 		URL:   os.Getenv("NOTIFICATION_WEBHOOK_URL"),
@@ -108,10 +94,6 @@ func InitializeLoginAttemptWebhookConfig() (LoginAttemptWebhookConfig, error) {
 }
 
 func InitializeJWTConfig() (JWTConfig, error) {
-	err := godotenv.Load()
-	if err != nil {
-		return JWTConfig{}, err
-	}
 
 	expiresAccessMinutes, err := strconv.Atoi(os.Getenv("EXPIRES_ACCESS_MINUTES"))
 	if err != nil {
@@ -132,10 +114,6 @@ func InitializeJWTConfig() (JWTConfig, error) {
 
 
 func InitializeServerConfig() (ServerConfig, error) {
-	err := godotenv.Load()
-	if err != nil {
-		return ServerConfig{}, err
-	}
 
 	return ServerConfig{
 		Title: os.Getenv("APP_NAME"),
