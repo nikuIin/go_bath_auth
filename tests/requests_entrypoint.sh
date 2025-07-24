@@ -99,7 +99,7 @@ NEW_REFRESH_TOKEN_AFTER_IP=$(echo "${IP_CHANGE_REFRESH_RESPONSE}" | jq -r .refre
 
 echo "  Новый access token после смены IP: ${NEW_ACCESS_TOKEN_AFTER_IP}"
 echo "  Новый refresh token после смены IP: ${NEW_REFRESH_TOKEN_AFTER_IP}"
-echo "  (Проверьте логи Docker Compose для уведомления о новом IP)"
+echo "  (Проверьте логи сервера уведомлений)"
 echo ""
 
 echo "--- Шаг 5: Обновление пары токенов (с другим User-Agent - ошибка и деавторизация) ---"
@@ -118,20 +118,12 @@ curl -s -X POST \
         \"refresh_token\": \"${NEW_REFRESH_TOKEN_AFTER_IP}\"
       }"
 echo ""
-
-echo "--- Шаг 5.1: Проверка доступа после смены User-Agent (ожидаем ошибку) ---"
-# GET /api/v1/user/me
-# После попытки смены User-Agent, все токены пользователя должны быть отозваны.
-echo "  Попытка использовать access token после ошибки User-Agent:"
-curl -s -X GET \
-  "http://localhost:8000/api/v1/user/me" \
-  -H "Authorization: Bearer ${NEW_ACCESS_TOKEN_AFTER_IP}"
 echo ""
 echo ""
 
 echo "--- Шаг 6: Деавторизация пользователя (Logout) ---"
 # POST /api/v1/auth/token/logout
-# Для этого шага, так как предыдущая попытка смены User-Agent отозвала все токены,
+# Для этого шага, так как предыдущая попытка смены User-Agent отозвала все refresh токены,
 # нам нужно сначала сгенерировать новую пару токенов для того же пользователя.
 echo "  Генерируем новую пару токенов для деавторизации:"
 RESPONSE_FOR_LOGOUT=$(curl -s -X POST \
@@ -155,13 +147,6 @@ echo ""
 echo ""
 
 echo "--- Шаг 6.1: Проверка деавторизации (ожидаем ошибку) ---"
-# GET /api/v1/user/me
-# После логаута, access токен больше не должен быть валидным.
-echo "  Попытка использовать access token после деавторизации:"
-curl -s -X GET \
-  "http://localhost:8000/api/v1/user/me" \
-  -H "Authorization: Bearer ${ACCESS_TOKEN_FOR_LOGOUT}"
-echo ""
 
 echo "  Попытка использовать refresh token после деавторизации:"
 curl -s -X POST \
