@@ -25,6 +25,7 @@ var (
 	ErrTokenExpires      = errors.New("token has been expired")
 	ErrUserAgentMismatch = errors.New("user agent mismatch")
 	ErrNotPairsTokens    = errors.New("token not from one pair")
+	ErrTokenBlocked      = errors.New("token is blocked")
 )
 
 type AuthService struct {
@@ -124,7 +125,7 @@ func (s *AuthService) RefreshTokens(
 	ctx context.Context, accessToken, refreshToken string,
 ) (newAccessToken, newRefreshToken string, err error) {
 	// Verify accessToken.
-	userID, accessJTI, err := s.VerifyAccessToken(ctx, accessToken)
+	userID, accessJTI, _, err := s.VerifyAccessToken(ctx, accessToken)
 	if err != nil {
 		return "", "", err
 	}
@@ -154,7 +155,9 @@ func (s *AuthService) RefreshTokens(
 	return newAccessToken, newRefreshToken, nil
 }
 
-func (s *AuthService) VerifyAccessToken(ctx context.Context, accessToken string) (userID, jti string, err error) {
+func (s *AuthService) VerifyAccessToken(ctx context.Context, accessToken string) (
+	userID, jti string, revoke_at time.Time, err error,
+) {
 	token, err := jwt.Parse(accessToken, func(token *jwt.Token) (any, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, ErrInvalidToken
@@ -163,28 +166,49 @@ func (s *AuthService) VerifyAccessToken(ctx context.Context, accessToken string)
 	})
 	if err != nil || !token.Valid {
 		s.logger.Info("Access token verification failed", "error", err)
-		return "", "", ErrInvalidToken
+		return "", "", time.Time{}, ErrInvalidToken
 	}
 
 	payload, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
 		s.logger.Info("Invalid access token payload, not a MapClaims")
-		return "", "", ErrInvalidToken
+		return "", "", time.Time{}, ErrInvalidToken
 	}
 
 	userID, ok = payload["sub"].(string)
 	if !ok {
 		s.logger.Info("Invalid 'sub' claim in access token")
-		return "", "", ErrInvalidToken
+		return "", "", time.Time{}, ErrInvalidToken
 	}
 
 	jti, ok = payload["jti"].(string)
 	if !ok {
 		s.logger.Info("Invalid 'jti' claim in access token")
-		return "", "", ErrInvalidToken
+		return "", "", time.Time{}, ErrInvalidToken
 	}
 
-	return userID, jti, nil
+	expFloat, ok := payload["exp"].(float64)
+	if !ok {
+		s.logger.Info("Invalid 'exp' claim in access token, not a float64", "payload", payload)
+		return "", "", time.Time{}, ErrInvalidToken
+	}
+	revoke_at = time.Unix(int64(expFloat), 0)
+	if !ok {
+		s.logger.Info("Invalid 'exp' claim in access token", "payload", payload)
+		return "", "", time.Time{}, ErrInvalidToken
+	}
+
+	isTokenBlocked, err := s.repo.IsTokenInBlackList(ctx, jti)
+	if err != nil {
+		s.logger.Error("FAILED to read blocked tokens.", "payload", payload, "error", err)
+		return "", "", time.Time{}, ErrInvalidToken
+	}
+
+	if isTokenBlocked {
+		return "", "", time.Time{}, ErrTokenBlocked
+	}
+
+	return userID, jti, revoke_at, err
 }
 
 func (s *AuthService) VerifyRefreshToken(
@@ -314,6 +338,38 @@ func (s *AuthService) RevokeUsersRefreshTokens(ctx context.Context, userID strin
 	err := s.repo.RevokeTokensByUserID(ctx, userID)
 	if err != nil {
 		s.logger.Error("failed to revoke user's refresh tokens", "error", err, "userID", userID)
+		return err
+	}
+	return nil
+}
+
+func (s *AuthService) LoggoutUser(ctx context.Context, accessToken string) error {
+	_, jti, revoke_at, err := s.VerifyAccessToken(ctx, accessToken)
+	if err != nil {
+		s.logger.Info("User logout FAILED.", "user_id", ctx.Value("user_id"), "error", err)
+		return err
+	}
+
+	err = s.BlockToken(ctx, jti, revoke_at)
+	if err != nil {
+		s.logger.Info("User logout FAILED.", "user_id", ctx.Value("user_id"), "error", err)
+		return err
+	}
+
+	return nil
+}
+
+func (s *AuthService) BlockToken(ctx context.Context, jti string, revoke_at time.Time) error {
+
+	// Clear tokens block list table of revoked tokens
+	err := s.repo.ClearBlockListFromRevokedTokens()
+	if err != nil {
+		return err
+	}
+
+	// block token
+	err = s.repo.BlockTokenById(ctx, jti, revoke_at)
+	if err != nil {
 		return err
 	}
 	return nil

@@ -160,6 +160,8 @@ func (h *AuthHandler) RefreshTokenPair(c *fiber.Ctx) error {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "access token is not pair to refresh token"})
 		} else if errors.Is(err, services.ErrUserAgentMismatch) {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "user agent changed, please autentificate again"})
+		} else if errors.Is(err, services.ErrTokenBlocked) {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "token is blocked"})
 		}
 		logger.Error("Refresh token error", "user", userID, "user_agent", userAgent, "ip_address", ipAddress)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "cant refresh tokens"})
@@ -182,12 +184,12 @@ func (h *AuthHandler) RefreshTokenPair(c *fiber.Ctx) error {
 // @Failure      500 {object} ErrorResponse "Internal server error"
 // @Router       /api/v1/auth/token/logout [post]
 func (h *AuthHandler) Logout(c *fiber.Ctx) error {
-	userID, ok := c.Locals("user_id").(string)
-	if !ok || userID == "" {
+	accessToken, ok := c.Locals("access_token").(string)
+	if !ok || accessToken == "" {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "invalid token"})
 	}
 
-	if err := h.authService.RevokeUsersRefreshTokens(c.Context(), userID); err != nil {
+	if err := h.authService.LoggoutUser(c.Context(), accessToken); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "could not logout"})
 	}
 

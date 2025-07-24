@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"errors"
 	"strings"
 
 	"github.com/nikuIin/base_go_auth/src/internal/services"
@@ -21,8 +22,10 @@ func AuthMiddleware(authService *services.AuthService) fiber.Handler {
 		}
 
 		accessToken := parts[1]
-		userID, _, err := authService.VerifyAccessToken(c.Context(), accessToken)
-		if err != nil {
+		userID, _, _, err := authService.VerifyAccessToken(c.Context(), accessToken)
+		if errors.Is(err, services.ErrTokenBlocked) {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "token is blocked"})
+		} else if err != nil {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "invalid token"})
 		}
 

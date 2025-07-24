@@ -126,3 +126,49 @@ func (r *TokenRepository) RevokeTokensByUserID(ctx context.Context, userID strin
 	r.logger.Debug("Successfully revoked all tokens for user", "userID", userID, "revoked_count", rowsAffected)
 	return nil
 }
+
+func (r *TokenRepository) IsTokenInBlackList(ctx context.Context, jti string) (bool,error) {
+	query := `select true from token_black_list where token_id = $1;`
+
+	var isTokenBlocked bool = false;
+
+	if err := r.db.QueryRowContext(ctx, query, jti).Scan(&isTokenBlocked); err != nil {
+		if err == sql.ErrNoRows {
+			return false, nil
+		} else {
+			return true, err
+		}
+	}
+
+	return isTokenBlocked, nil;
+}
+
+
+func (r *TokenRepository) BlockTokenById(ctx context.Context, jti string, revoke_at time.Time) error {
+	query := "insert into token_black_list (token_id, revoke_at) values ($1, $2);"
+
+	_, err := r.db.ExecContext(ctx, query, jti, revoke_at)
+
+	if err != nil {
+		r.logger.Error("Failed to block token", "error", err, "jti", jti, "revoke_at", revoke_at)
+		return err
+	}
+
+	r.logger.Debug("Block token", "jti", jti)
+	return nil
+}
+
+
+func (r *TokenRepository) ClearBlockListFromRevokedTokens() error {
+	query := "delete from token_black_list where revoke_at <= current_timestamp;"
+
+	_, err := r.db.Exec(query)
+
+	if err != nil {
+		r.logger.Error("Failed to clear table black_token_list of revoked tokens", "error", err)
+		return err
+	}
+
+	r.logger.Debug("Blocked token table cleared of revoked tokens SUCCESS")
+	return nil
+}
