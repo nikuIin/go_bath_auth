@@ -8,6 +8,7 @@ import (
 
 	_ "github.com/lib/pq"
 	"github.com/nikuIin/base_go_auth/src/core"
+	"github.com/pressly/goose"
 )
 
 
@@ -41,6 +42,11 @@ func ConnectToDatabase(databaseConfig core.DatabaseConfig, logger *slog.Logger) 
 		logger.Error("Failed check connection to DB", "err", err)
 		return nil, fmt.Errorf("Failed to ping database: %v", err)
 	}
+
+	// run migrations
+	if err := goose.Up(db, "./migrations"); err != nil {
+    		logger.Error("goose up failed: %v", err)
+    	}
 
 	logger.Debug("Successfully connected to Database.")
 	return db, nil
