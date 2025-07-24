@@ -4,8 +4,6 @@ services:
     build:
       context: ./postgres_image
       dockerfile: Dockerfile
-      platforms:
-        - linux/amd64
     container_name: go-base-auth-base
     env_file:
       - .env
@@ -29,8 +27,6 @@ services:
     image: backend-go-base-auth-image:1.0
     build:
       context: ./
-      platforms:
-        - linux/amd64
     container_name: backend-go-base-auth-cnt
     env_file:
       - .env

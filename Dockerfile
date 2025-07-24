@@ -8,7 +8,7 @@ COPY migrations /app/migrations
 COPY docs /app/docs
 COPY src /app/src
 
-RUN go build /app/src/main.go
+RUN CGO_ENABLED=0 go build -o /app/main /app/src/main.go
 
 # now add production version
 FROM kukymbr/goose-docker:3.24.2 AS production
@@ -20,6 +20,11 @@ RUN apk --no-cache add bash netcat-openbsd
 
 COPY --from=build /app/main /app/main
 COPY entrypoint.sh /app/entrypoint.sh
-COPY --from=build /app/migrations /app/migrations
+COPY ./migrations /app/migrations/
 
-ENTRYPOINT ["/app/main"]
+RUN chmod +x /app/main
+RUN chmod +x /app/entrypoint.sh
+
+ENTRYPOINT ["/app/entrypoint.sh"]
+
+CMD ["/app/main"]

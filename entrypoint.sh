@@ -48,7 +48,8 @@ if ! goose up; then
 fi
 log "Goose migrations applied successfully!"
 
+pwd
+ls -r
 
-ls -r .
-chmod +x ./main
-exec ./main
+log "Starting the application..."
+exec "$@"
