@@ -22,6 +22,7 @@ var (
 	ErrInvalidToken      = errors.New("invalid token")
 	ErrTokenRevoked      = errors.New("token revoked")
 	ErrTokenNotFound     = errors.New("token not found")
+	ErrTokenExpires      = errors.New("token has been expired")
 	ErrUserAgentMismatch = errors.New("user agent mismatch")
 	ErrNotPairsTokens    = errors.New("token not from one pair")
 )
@@ -242,7 +243,7 @@ func (s *AuthService) VerifyRefreshToken(
 			"No matching refresh token found for user in database after iterating all records",
 			"userID", userID,
 		)
-		return "", "", ErrInvalidToken
+		return "", "", ErrTokenNotFound
 	}
 
 	if time.Now().After(refreshTokenData.ExpiresAt) {
@@ -258,7 +259,7 @@ func (s *AuthService) VerifyRefreshToken(
 				"token_hash", refreshTokenData.TokenHash,
 			)
 		}
-		return "", "", ErrInvalidToken
+		return "", "", ErrTokenExpires
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(refreshTokenData.TokenHash), refreshBytes)

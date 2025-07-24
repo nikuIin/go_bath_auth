@@ -150,14 +150,19 @@ func (h *AuthHandler) RefreshTokenPair(c *fiber.Ctx) error {
 	newAccessToken, newRefreshToken, err := h.authService.RefreshTokens(ctxWithData, accessToken, req.RefreshToken)
 	if err != nil {
 		// Handle specific errors from the service layer
-		if errors.Is(err, services.ErrInvalidToken) ||
-					errors.Is(err, services.ErrTokenRevoked) ||
-					errors.Is(err, services.ErrTokenNotFound) ||
-					errors.Is(err, services.ErrNotPairsTokens) ||
-					errors.Is(err, services.ErrUserAgentMismatch) { // User agent mismatch also leads to Unauthorized
+		if errors.Is(err, services.ErrInvalidToken) {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "invalid token"})
+		} else if errors.Is(err, services.ErrTokenRevoked) {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "token has been revoked"})
+		} else if errors.Is(err, services.ErrTokenNotFound) {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "refresh token is invalid"})
+		} else if errors.Is(err, services.ErrNotPairsTokens) {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "access token is not pair to refresh token"})
+		} else if errors.Is(err, services.ErrUserAgentMismatch) {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "user agent changed, please autentificate again"})
 		}
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "could not refresh tokens"})
+		logger.Error("Refresh token error", "user", userID, "user_agent", userAgent, "ip_address", ipAddress)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "cant refresh tokens"})
 	}
 
 	return c.JSON(fiber.Map{
